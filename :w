@@ -1,0 +1,44 @@
+#pragma once
+
+#include <memory>
+
+#define ALLOC_DEFAULT 1024
+
+template <typename T>
+union PoolChunk {
+	T val;
+	PoolChunk* next;
+};
+
+template <typename T>
+class PoolAlloc {
+public:
+	PoolAlloc(size_t sz = ALLOC_DEFAULT) 
+		: 	_sz { sz },
+			_data { nullptr },
+			_head { nullptr }
+	{
+		_data = new PoolChunk<T>[_sz];
+		_head = _data;
+		for (size_t i = 0; i < sz-1; i++) {
+			_data[i]->next = _data[i+1] 
+		}
+	}
+
+	virtual ~PoolAlloc() {
+		if (_data) {
+			delete[] _data;
+			_data = nullptr;
+		}
+		if (_head) {
+			delete _head;
+			_head = nullptr;
+		}
+	}
+
+
+protected:
+	size_t _sz;
+	PoolChunk<T>* _data;
+	PoolChunk<T>* _head;
+};
