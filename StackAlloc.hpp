@@ -1,10 +1,50 @@
+/* 
+	StackAlloc.hpp 
+	Allows allocation for different data types
+	Gives away memory like a stack, ie. it destroys its elements in reverse order of their creation
+	
+*/
+
 #pragma once
+
+#include <vector>
 
 #include "MemoryConfig.hpp"
 #include "Errors.hpp"
 
 namespace moe { 
 namespace memory {
+
+/* class to "save" the destructors of the objects using Memory from StackAlloc */
+class StackAllocDestructor {
+public:
+	template <typename T>
+	explicit StackAllocDestructor(const T& data)
+		: _data(moe_addressof(data))
+	{
+		_destructor = [](const void* lambdaData) {
+			auto type = static_cast<T*>lambdaData;
+			type->~T();
+		};
+	}
+
+	void operator()() {
+		_destructor(_data);
+	}
+
+private:
+	const void* _data;
+	void(*_destructor)(const void*);	//lambda-expression
+};
+
+
+struct StackAllocMarker {
+	StackAllocMarker(byte* val, size_t handle)
+		: value{ val }, destructorHandle{ handle } {}
+	byte* value;
+	size_t destructorHandle;
+};
+
 
 class StackAlloc {
 public:
@@ -56,14 +96,50 @@ public:
 		T* objs;
 		for (size_t i = 0; i < numObjs; i++) {
 			objs = new(moe_addressof(objPointer[i])) T(std::forward<ARGS>(args)...);
+			//keep track of the destructors of our objs:
+			_destructors.push_back(StackAllocDestructor{ *obj });
 		}
 		return objPointer;
+	}
 
+	void destroyAll() {
+		_head = _data;
+		for(size_t i = 0; i < _destructors.size(); i++) {
+			_destructors.back()();
+		}
+		_destructors.clear();
+	}
+
+	void destroyToMarker(StackAllocMarker marker) {
+		_head = marker.value;
+		while (_destructors.size() > marker.destructorHandle) {
+			_destructors.back()();
+			_destructors.pop_back();
+		}
+	}
+
+	StackAllocMarker getMarker() {
+		return StackAllocMarker{ _head, _destructors.size() };
 	}
 
 private:
+	//only store destructors non-trivially-destructable objs:
+	template <typename T>
+	inline typename std::enable_if<std::is_trivially_destructible<T>::value>::type
+	addToList(T* obj) {
+		//do nothing
+	}
+
+	template <typename T>
+	inline typename std::enable_if<!std::is_trivially_destructible<T>::value>::type
+	addToList(T* obj) {
+		_destructors.push_back(StackAllocDestructor{ *obj });
+	}
+
 	size_t _size;
 	byte* _head;
 	byte* _data;
+
+	std::vector<StackAllocDestructor> _destructors;
 };	
 }} //end of namespace moe::memory
