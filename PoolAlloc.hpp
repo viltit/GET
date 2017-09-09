@@ -56,7 +56,7 @@ public:
 
 	void destroy(T* data) {
 		//make sure data is stored within PoolAllocs memory:
-		if ((size_t)data < (size_t)_data || (size_t)data > (size_t)_data + _sz-1) {
+		if ((size_t)data < (size_t)_data || (size_t)data > ((size_t)_data + _sz * sizeof(T))) {
 			throw errors::MemoryError(("<PoolAlloc::destroy> " + INVALID_DEALLOC).c_str());
 		}
 		data->~T();

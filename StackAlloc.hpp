@@ -8,7 +8,7 @@
 #pragma once
 
 #include <vector>
-
+#include <iostream>
 #include "MemoryConfig.hpp"
 #include "Errors.hpp"
 
@@ -23,7 +23,7 @@ public:
 		: _data(moe_addressof(data))
 	{
 		_destructor = [](const void* lambdaData) {
-			auto type = static_cast<T*>lambdaData;
+			auto type = static_cast<const T*>(lambdaData);
 			type->~T();
 		};
 	}
@@ -91,11 +91,11 @@ public:
 			throw errors::MemoryError(("<StackAlloc::make> " + OUT_OF_MEMORY).c_str());
 		}
 		T* objPointer = reinterpret_cast<T*>(location);
+		_head = headPtr;
 
 		//create objs:
-		T* objs;
 		for (size_t i = 0; i < numObjs; i++) {
-			objs = new(moe_addressof(objPointer[i])) T(std::forward<ARGS>(args)...);
+			T* obj = new(moe_addressof(objPointer[i])) T(std::forward<ARGS>(args)...);
 			//keep track of the destructors of our objs:
 			_destructors.push_back(StackAllocDestructor{ *obj });
 		}
@@ -104,8 +104,9 @@ public:
 
 	void destroyAll() {
 		_head = _data;
+		std::cout << "Destructors size: " << _destructors.size() << std::endl;
 		for(size_t i = 0; i < _destructors.size(); i++) {
-			_destructors.back()();
+			_destructors[i]();
 		}
 		_destructors.clear();
 	}
