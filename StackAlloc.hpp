@@ -104,7 +104,6 @@ public:
 
 	void destroyAll() {
 		_head = _data;
-		std::cout << "Destructors size: " << _destructors.size() << std::endl;
 		for(size_t i = 0; i < _destructors.size(); i++) {
 			_destructors[i]();
 		}

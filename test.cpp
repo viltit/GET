@@ -1,6 +1,7 @@
 #include "PoolAlloc.hpp"
 #include "StackAlloc.hpp"
 #include "StdWrapper.hpp"
+#include "GeneralAlloc.hpp"
 
 #include <iostream>
 #include <vector>
@@ -34,12 +35,13 @@ int main(int argc, char** args) {
 	typedef std::chrono::duration<double, std::milli> tick;
 	
 	const size_t ITS = 400000;
-
-	for (size_t j = 0; j < 10; j++) {
+	
 	TestClass* objs1[ITS];
 	TestClass* objs2[ITS];
+	TestClass* objs3;
 	PoolAlloc<TestClass> pool{ ITS };
-
+	StackAlloc stack{ ITS * sizeof(TestClass) };
+	for (size_t j = 0; j < 10; j++) {
 	try {
 		//run 1: use new and delete:
 		auto t0 = clock::now();
@@ -60,33 +62,21 @@ int main(int argc, char** args) {
 
 		dt = tick(clock::now() - t0).count();
 		std::cout << "Pool Alloc: " << dt << std::endl;
-	
-		/*
-		StackAlloc stack;
-		std::list<TestClass*> objs;
-		objs.emplace_back(stack.make<TestClass>(1, "Agata"));
-		objs.emplace_back(stack.make<TestClass>(1, "Ines"));
-		objs.emplace_back(stack.make<TestClass>(1, "Saskia"));
+		
+		t0 = clock::now();
 
-		for (auto& o : objs) o->test();
-
-		objs.clear();
+		objs3 = stack.make<TestClass>(ITS, "test");
 		stack.destroyAll();
 
-		std::vector<TestClass*> stackObjs;
-		stackObjs.push_back(stack.make<TestClass>(1, "Martin"));
-		stackObjs.push_back(stack.make<TestClass>(1, "Stefan"));
-		for (auto& o : stackObjs) o->test(); 
-		stackObjs.clear();
-		stack.destroyAll();
-		*/
-	
+		dt = tick(clock::now() - t0).count();
+		std::cout << "StackAlloc: " << dt << std::endl;
+
 	}
-
 	catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
 		return -1;
 	}
 	}
+
 	return 0;
 }

@@ -11,3 +11,8 @@ CCFLAGS = -std=c++17
 
 $(OUT) : $(SRC)
 	$(CC) $(CCFLAGS) $(SRC) -o $@
+
+opt: $(SRC)
+	$(CC) $(CCFLAGS) -O3 $(SRC) -o $(OUT)
+
+
